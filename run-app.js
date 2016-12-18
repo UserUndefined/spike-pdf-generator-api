@@ -1,4 +1,5 @@
 var application = require('./app');
+//var application = require('./google');
 var context = require('./context');
 
 context._initialize({

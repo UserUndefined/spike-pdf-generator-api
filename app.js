@@ -5,21 +5,33 @@ var fs = require('fs');
 var pdf = require('html-pdf');
 var html = fs.readFileSync('./template.html', 'utf8');
 var options = { format: 'Letter', "height": "29.7cm", "width": "21cm"};
+var google = require('googleapis');
+var key = require('./googlekey.json');
+var scopes = ['https://www.googleapis.com/auth/drive'];
+var drive = google.drive({version: 'v3'});
+
+var jwtClient = new google.auth.JWT(
+    key.client_email,
+    null,
+    key.private_key,
+    scopes,
+    null
+);
 
 console.log('Loading function spike-pdf-generator-api');
 
 exports.handler = function(event, context) {
-    generatePdfToBuffer(function(err, filePath){
+    generatePdfToBuffer(function(err, files){
         if (err) {
             console.log(err, err.stack);
             context.fail();
         } else {
-            console.log(filePath);
-            context.succeed({filePath: filePath});
+            console.log(files);
+            context.succeed({filePath: files});
         }
     });
 };
-
+/*
 function generatePdfToFile(callback){
     console.log('calling query');
     pdf.create(html, options).toFile('./output.pdf', function(err, res) {
@@ -31,7 +43,7 @@ function generatePdfToFile(callback){
         return callback(null, res);
     });
 }
-
+*/
 function generatePdfToBuffer(callback){
     console.log('calling query');
         pdf.create(html, options).toBuffer(function(err, buffer){
@@ -68,7 +80,35 @@ function putObjectToS3(bucket, key, data, callback){
             return callback(err);
         } else {
             console.log(data);
-            return callback(null, data);
+            getDriveFiles(function(err, files){
+                if(err){
+                    console.log(err, err.stack);
+                    return callback(err);
+                } else {
+                    console.log(files);
+                    return callback(null, files);
+                }
+            });
         }
+    });
+}
+
+function getDriveFiles(callback){
+    jwtClient.authorize(function (err, tokens) {
+        if (err) {
+            console.log(err);
+            return callback(err);
+        }
+        drive.files.list({
+            auth: jwtClient
+        }, function (err, resp) {
+            if (err) {
+                console.log(err);
+                return callback(err);
+            } else {
+                console.log(resp);
+                return callback(null, resp.files);
+            }
+        });
     });
 }
