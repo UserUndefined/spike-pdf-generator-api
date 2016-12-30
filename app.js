@@ -53,7 +53,18 @@ function generatePdfToBuffer(callback){
         } else {
             console.log('file buffered ok ' + buffer);
             console.log('send to S3');
+/*
             putObjectToS3('temp-file-repo', 'AKIAJ3MWHLCIIHHZMQKQ', buffer, function(err, data){
+                if (err) {
+                    console.log(err, err.stack);
+                    return callback(err);
+                } else {
+                    console.log(data);
+                    return callback(null, data);
+                }
+            });
+ */
+            uploadToDrive(buffer, function(err, data){
                 if (err) {
                     console.log(err, err.stack);
                     return callback(err);
@@ -108,6 +119,34 @@ function getDriveFiles(callback){
             } else {
                 console.log(resp);
                 return callback(null, resp.files);
+            }
+        });
+    });
+}
+
+function uploadToDrive(file, callback){
+    jwtClient.authorize(function (err, tokens) {
+        if (err) {
+            console.log(err);
+            return callback(err);
+        }
+        drive.files.create({
+            auth: jwtClient,
+            resource: {
+                name: 'test.pdf',
+                mimeType: 'application/pdf'
+            },
+            media: {
+                mimeType: 'application/pdf',
+                body: file
+            }
+        }, function (err, resp) {
+            if (err) {
+                console.log(err);
+                return callback(err);
+            } else {
+                console.log(resp);
+                return callback(null, resp);
             }
         });
     });
